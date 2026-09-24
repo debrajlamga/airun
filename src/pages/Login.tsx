@@ -205,9 +205,15 @@ export default function Login() {
                   <input type="checkbox" className="w-3.5 h-3.5 rounded border-gray-600 bg-gray-800 text-blue-600 focus:ring-blue-500" />
                   <span className="text-xs text-gray-400">Remember me</span>
                 </label>
-                <button type="button" onClick={() => setMode('forgot')} className="text-xs text-blue-400 hover:text-blue-300">
-                  Forgot password?
-                </button>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => setFormData(p => ({ ...p, email: 'trader@demo.com', password: 'Trading@2024' }))} className="text-xs text-blue-400 hover:text-blue-300">
+                    Use Demo
+                  </button>
+                  <span className="text-gray-700">|</span>
+                  <button type="button" onClick={() => setMode('forgot')} className="text-xs text-blue-400 hover:text-blue-300">
+                    Forgot?
+                  </button>
+                </div>
               </div>
 
               <button
@@ -377,6 +383,33 @@ export default function Login() {
               </button>
             </div>
           )}
+        </div>
+
+        {/* Demo Credentials */}
+        <div className="mt-4 bg-blue-900/20 border border-blue-700/40 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-5 h-5 bg-blue-600/30 rounded flex items-center justify-center">
+              <span className="text-[10px]">🔑</span>
+            </div>
+            <h4 className="text-xs font-medium text-blue-300">Demo Credentials</h4>
+          </div>
+          <div className="space-y-1.5 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-400">Email:</span>
+              <code className="text-blue-300 bg-gray-800 px-2 py-0.5 rounded">trader@demo.com</code>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-400">Password:</span>
+              <code className="text-blue-300 bg-gray-800 px-2 py-0.5 rounded">Trading@2024</code>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-400">MFA Code:</span>
+              <code className="text-blue-300 bg-gray-800 px-2 py-0.5 rounded">123456</code>
+            </div>
+          </div>
+          <p className="text-[10px] text-gray-500 mt-2">
+            Ya koi bhi valid email + 8+ char password use karein
+          </p>
         </div>
 
         {/* Security Info */}

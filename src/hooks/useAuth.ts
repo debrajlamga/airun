@@ -157,8 +157,11 @@ export function useAuth() {
     await new Promise(r => setTimeout(r, 800 + Math.random() * 400));
 
     // Simulated authentication (in production, this is a backend API call)
-    // For demo: accept any valid email with password "Trading@2024" or any password for demo
-    const isValidPassword = credentials.password.length >= 8;
+    // Demo credentials: trader@demo.com / Trading@2024
+    // Also accepts any valid email with password 8+ chars for testing
+    const DEMO_EMAIL = 'trader@demo.com';
+    const DEMO_PASSWORD = 'Trading@2024';
+    const isValidPassword = (credentials.email === DEMO_EMAIL && credentials.password === DEMO_PASSWORD) || credentials.password.length >= 8;
 
     if (!isValidPassword) {
       const newAttempts = { count: attempts.count + 1, lockedUntil: 0 };
