@@ -168,19 +168,51 @@ TRADING_MODE=PAPER  # Options: BACKTEST | PAPER | LIVE
 ### Broker Integration
 
 Supported brokers (via adapter pattern):
+- **Groww** (API integration)
 - Zerodha (Kite Connect)
 - Upstox
 - Angel One
 - ICICI Direct
 - 5paisa
 
-Configure in `.env`:
+#### Groww Integration
+
+Groww broker is fully supported with the following features:
+- Real-time market data (quotes, OHLCV)
+- Order placement (MARKET, LIMIT, SL, SL-M)
+- Position management
+- Margin checking
+- Order status tracking
+
+**Configuration:**
 ```bash
-BROKER_NAME=zerodha
-BROKER_API_KEY=your_api_key
-BROKER_API_SECRET=your_api_secret
+# .env
+BROKER_NAME=groww
+BROKER_API_KEY=your_groww_api_key
+BROKER_API_SECRET=your_groww_api_secret
 BROKER_ACCESS_TOKEN=your_access_token
+GROWW_API_METHOD=api_key  # or: access_token, session
+GROWW_BASE_URL=https://api.groww.in
+GROWW_PRODUCT_TYPE=MIS  # MIS (intraday) or CNC (delivery)
 ```
+
+**⚠️ Important Notes for Groww:**
+- Groww's public API availability may be limited compared to Zerodha/Upstox
+- Ensure you have proper authorization from Groww before using in production
+- For enterprise/institutional access, contact Groww support
+- Alternative: Use Zerodha Kite Connect for most reliable API access
+
+**Testing Groww Connection:**
+1. Go to Settings → Broker
+2. Select Groww
+3. Enter your API credentials
+4. Click "Test Connection"
+5. If successful, you'll see a green "Connected" status
+
+**Groww API Methods:**
+- `api_key` — Official API key + secret (recommended)
+- `access_token` — OAuth access token
+- `session` — Web session token (use with caution)
 
 ---
 

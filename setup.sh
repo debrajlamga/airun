@@ -226,11 +226,17 @@ SSL_KEY_PATH=/etc/letsencrypt/live/your-domain.com/privkey.pem
 
 # ─── Broker Configuration ────────────────────────────────────────────────────
 # LIVE trading disabled by default. Configure and set TRADING_MODE=LIVE to enable.
-BROKER_NAME=
+# Options: groww | zerodha | upstox | angel | paper
+BROKER_NAME=groww
 BROKER_API_KEY=
 BROKER_API_SECRET=
 BROKER_ACCESS_TOKEN=
 BROKER_REDIRECT_URI=
+
+# Groww-specific
+GROWW_API_METHOD=api_key
+GROWW_BASE_URL=https://api.groww.in
+GROWW_PRODUCT_TYPE=MIS
 
 # ─── Notifications ───────────────────────────────────────────────────────────
 TELEGRAM_BOT_TOKEN=
@@ -2154,6 +2160,7 @@ echo -e "${GREEN}║${NC}                                                       
 echo -e "${GREEN}║${NC}  Server URL:  ${CYAN}http://${SERVER_IP}${NC}                          ${GREEN}║${NC}"
 echo -e "${GREEN}║${NC}  API Docs:    ${CYAN}http://${SERVER_IP}/api/docs${NC}                    ${GREEN}║${NC}"
 echo -e "${GREEN}║${NC}  Trading Mode: ${YELLOW}PAPER${NC} (safe — no real orders)              ${GREEN}║${NC}"
+echo -e "${GREEN}║${NC}  Broker:       ${GREEN}Groww${NC} (configure API keys in .env)              ${GREEN}║${NC}"
 echo -e "${GREEN}║${NC}                                                              ${GREEN}║${NC}"
 echo -e "${GREEN}║${NC}  ${RED}IMPORTANT:${NC} Live trading is DISABLED by default.             ${GREEN}║${NC}"
 echo -e "${GREEN}║${NC}  To enable: Edit .env → set TRADING_MODE=LIVE              ${GREEN}║${NC}"
