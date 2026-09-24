@@ -41,6 +41,7 @@ Broker Adapter (Zerodha/Upstox/Angel)
 ## Features
 
 ### Security
+- **Single Admin System**: Only ONE admin account exists — no registration, no other users
 - **Authentication**: JWT + Refresh tokens with Argon2id password hashing
 - **Two-Factor Authentication**: TOTP-based MFA (Google Authenticator compatible)
 - **Brute-Force Protection**: Account lockout after failed attempts
@@ -90,15 +91,18 @@ The installer automatically:
 1. ✅ Detects OS and checks system requirements
 2. ✅ Installs Docker, Docker Compose
 3. ✅ Generates cryptographically secure secrets
-4. ✅ Builds backend + frontend
-5. ✅ Creates PostgreSQL database with all tables
-6. ✅ Configures Nginx reverse proxy
-7. ✅ Sets up firewall (UFW) + Fail2ban
-8. ✅ Configures automatic backups
-9. ✅ Creates systemd service (auto-restart on reboot)
-10. ✅ Runs health checks and verification
+4. ✅ **Creates single admin account** (credentials shown at end)
+5. ✅ Builds backend + frontend
+6. ✅ Creates PostgreSQL database with all tables
+7. ✅ Configures Nginx reverse proxy
+8. ✅ Sets up firewall (UFW) + Fail2ban
+9. ✅ Configures automatic backups
+10. ✅ Creates systemd service (auto-restart on reboot)
+11. ✅ Runs health checks and verification
 
 **Estimated time: 5-15 minutes**
+
+⚠️ **IMPORTANT**: Admin credentials are displayed ONCE at the end of installation. Save them immediately!
 
 ---
 

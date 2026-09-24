@@ -1,21 +1,20 @@
 import { useState, useCallback, useEffect } from 'react';
 
-interface User {
+interface AdminUser {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'trader' | 'viewer';
+  role: 'admin';
   mfaEnabled: boolean;
   lastLogin: number;
   sessionExpiry: number;
 }
 
 interface AuthState {
-  user: User | null;
+  user: AdminUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   mfaRequired: boolean;
-  mfaVerified: boolean;
   error: string | null;
   sessionToken: string | null;
 }
@@ -25,18 +24,19 @@ interface LoginCredentials {
   password: string;
 }
 
-interface RegisterData {
-  name: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-}
+// ─── Single Admin Mode ──────────────────────────────────────────────────────
+// Only ONE admin account exists. No registration. No other users.
+// Admin credentials are generated during setup.sh and shown once.
 
-// Simulated secure auth service (in production, this calls the backend API)
-const AUTH_STORAGE_KEY = 'ai_trading_auth';
+const AUTH_STORAGE_KEY = 'ai_trading_admin_session';
 const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
+
+// Admin credentials (in production, these come from .env / backend)
+// For demo: hardcoded. In real deployment, setup.sh generates these.
+const ADMIN_EMAIL = 'admin@tradingbot.local';
+const ADMIN_PASSWORD = 'Admin@Secure2024!';
 
 function getLoginAttempts(): { count: number; lockedUntil: number } {
   try {
@@ -68,7 +68,6 @@ export function useAuth() {
             isAuthenticated: true,
             isLoading: false,
             mfaRequired: false,
-            mfaVerified: true,
             error: null,
             sessionToken: parsed.sessionToken,
           };
@@ -81,7 +80,6 @@ export function useAuth() {
       isAuthenticated: false,
       isLoading: false,
       mfaRequired: false,
-      mfaVerified: false,
       error: null,
       sessionToken: null,
     };
@@ -132,38 +130,25 @@ export function useAuth() {
       setState(prev => ({
         ...prev,
         isLoading: false,
-        error: `Too many failed attempts. Account locked for ${remaining} minutes.`,
+        error: `Account locked. Try again in ${remaining} minutes.`,
       }));
       return false;
     }
 
     // Input validation
     if (!credentials.email || !credentials.password) {
-      setState(prev => ({ ...prev, isLoading: false, error: 'Email and password are required.' }));
+      setState(prev => ({ ...prev, isLoading: false, error: 'Email and password required.' }));
       return false;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(credentials.email)) {
-      setState(prev => ({ ...prev, isLoading: false, error: 'Invalid email format.' }));
-      return false;
-    }
+    // Simulate API delay (in production, this is a backend call)
+    await new Promise(r => setTimeout(r, 600 + Math.random() * 400));
 
-    if (credentials.password.length < 8) {
-      setState(prev => ({ ...prev, isLoading: false, error: 'Password must be at least 8 characters.' }));
-      return false;
-    }
+    // ─── Single Admin Authentication ─────────────────────────────────────
+    // Only ONE admin account. No other users allowed.
+    const isAdmin = credentials.email === ADMIN_EMAIL && credentials.password === ADMIN_PASSWORD;
 
-    // Simulate API call delay
-    await new Promise(r => setTimeout(r, 800 + Math.random() * 400));
-
-    // Simulated authentication (in production, this is a backend API call)
-    // Demo credentials: trader@demo.com / Trading@2024
-    // Also accepts any valid email with password 8+ chars for testing
-    const DEMO_EMAIL = 'trader@demo.com';
-    const DEMO_PASSWORD = 'Trading@2024';
-    const isValidPassword = (credentials.email === DEMO_EMAIL && credentials.password === DEMO_PASSWORD) || credentials.password.length >= 8;
-
-    if (!isValidPassword) {
+    if (!isAdmin) {
       const newAttempts = { count: attempts.count + 1, lockedUntil: 0 };
       if (newAttempts.count >= MAX_LOGIN_ATTEMPTS) {
         newAttempts.lockedUntil = Date.now() + LOCKOUT_DURATION;
@@ -173,8 +158,8 @@ export function useAuth() {
         ...prev,
         isLoading: false,
         error: newAttempts.count >= MAX_LOGIN_ATTEMPTS
-          ? `Too many failed attempts. Account locked for 15 minutes.`
-          : `Invalid credentials. ${MAX_LOGIN_ATTEMPTS - newAttempts.count} attempts remaining.`,
+          ? `Too many failed attempts. Locked for 15 minutes.`
+          : `Invalid credentials. ${MAX_LOGIN_ATTEMPTS - newAttempts.count} attempts left.`,
       }));
       return false;
     }
@@ -182,85 +167,50 @@ export function useAuth() {
     // Reset login attempts on success
     setLoginAttempts({ count: 0, lockedUntil: 0 });
 
-    // Simulate MFA requirement (in production, check user's MFA setting)
-    const mfaEnabled = true; // Simulate MFA being enabled
-
-    if (mfaEnabled) {
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        mfaRequired: true,
-        error: null,
-      }));
-      // Store temp credentials for after MFA
-      sessionStorage.setItem('pending_auth', JSON.stringify({
-        email: credentials.email,
-        timestamp: Date.now(),
-      }));
-      return true;
-    }
-
-    // Complete login
-    const user: User = {
-      id: 'usr_' + generateSessionToken().slice(0, 16),
-      email: credentials.email,
-      name: credentials.email.split('@')[0],
-      role: 'admin',
-      mfaEnabled: true,
-      lastLogin: Date.now(),
-      sessionExpiry: Date.now() + SESSION_TIMEOUT,
-    };
-    const sessionToken = generateSessionToken();
-
-    const authData = { user, sessionToken, sessionExpiry: Date.now() + SESSION_TIMEOUT };
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
-
-    setState({
-      user,
-      isAuthenticated: true,
+    // MFA required for admin
+    setState(prev => ({
+      ...prev,
       isLoading: false,
-      mfaRequired: false,
-      mfaVerified: true,
+      mfaRequired: true,
       error: null,
-      sessionToken,
-    });
-
+    }));
+    sessionStorage.setItem('pending_admin_auth', JSON.stringify({
+      email: credentials.email,
+      timestamp: Date.now(),
+    }));
     return true;
   }, []);
 
   const verifyMFA = useCallback(async (code: string) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
-    // Validate code format
     if (!/^\d{6}$/.test(code)) {
-      setState(prev => ({ ...prev, isLoading: false, error: 'Enter a valid 6-digit code.' }));
+      setState(prev => ({ ...prev, isLoading: false, error: 'Enter valid 6-digit code.' }));
       return false;
     }
 
-    // Simulate API verification delay
-    await new Promise(r => setTimeout(r, 500 + Math.random() * 300));
+    await new Promise(r => setTimeout(r, 400 + Math.random() * 300));
 
-    // In production: verify TOTP code against user's secret
-    // For demo: accept any 6-digit code
-    const pendingStr = sessionStorage.getItem('pending_auth');
+    const pendingStr = sessionStorage.getItem('pending_admin_auth');
     if (!pendingStr) {
-      setState(prev => ({ ...prev, isLoading: false, mfaRequired: false, error: 'Session expired. Please login again.' }));
+      setState(prev => ({ ...prev, isLoading: false, mfaRequired: false, error: 'Session expired. Login again.' }));
       return false;
     }
 
     const pending = JSON.parse(pendingStr);
-    if (Date.now() - pending.timestamp > 300000) { // 5 min expiry
-      sessionStorage.removeItem('pending_auth');
-      setState(prev => ({ ...prev, isLoading: false, mfaRequired: false, error: 'MFA code expired. Please login again.' }));
+    if (Date.now() - pending.timestamp > 300000) {
+      sessionStorage.removeItem('pending_admin_auth');
+      setState(prev => ({ ...prev, isLoading: false, mfaRequired: false, error: 'MFA expired. Login again.' }));
       return false;
     }
 
-    sessionStorage.removeItem('pending_auth');
+    sessionStorage.removeItem('pending_admin_auth');
 
-    const user: User = {
-      id: 'usr_' + generateSessionToken().slice(0, 16),
-      email: pending.email,
-      name: pending.email.split('@')[0],
+    // Create admin session
+    const adminUser: AdminUser = {
+      id: 'admin-001',
+      email: ADMIN_EMAIL,
+      name: 'Admin',
       role: 'admin',
       mfaEnabled: true,
       lastLogin: Date.now(),
@@ -268,15 +218,14 @@ export function useAuth() {
     };
     const sessionToken = generateSessionToken();
 
-    const authData = { user, sessionToken, sessionExpiry: Date.now() + SESSION_TIMEOUT };
+    const authData = { user: adminUser, sessionToken, sessionExpiry: Date.now() + SESSION_TIMEOUT };
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
 
     setState({
-      user,
+      user: adminUser,
       isAuthenticated: true,
       isLoading: false,
       mfaRequired: false,
-      mfaVerified: true,
       error: null,
       sessionToken,
     });
@@ -284,73 +233,21 @@ export function useAuth() {
     return true;
   }, []);
 
-  const register = useCallback(async (data: RegisterData) => {
-    setState(prev => ({ ...prev, isLoading: true, error: null }));
-
-    // Validation
-    if (!data.name || !data.email || !data.password || !data.confirmPassword) {
-      setState(prev => ({ ...prev, isLoading: false, error: 'All fields are required.' }));
-      return false;
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
-      setState(prev => ({ ...prev, isLoading: false, error: 'Invalid email format.' }));
-      return false;
-    }
-
-    if (data.name.length < 2) {
-      setState(prev => ({ ...prev, isLoading: false, error: 'Name must be at least 2 characters.' }));
-      return false;
-    }
-
-    if (data.password.length < 10) {
-      setState(prev => ({ ...prev, isLoading: false, error: 'Password must be at least 10 characters.' }));
-      return false;
-    }
-
-    // Password strength checks
-    const hasUpper = /[A-Z]/.test(data.password);
-    const hasLower = /[a-z]/.test(data.password);
-    const hasNumber = /[0-9]/.test(data.password);
-    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(data.password);
-
-    if (!(hasUpper && hasLower && hasNumber && hasSpecial)) {
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: 'Password must contain uppercase, lowercase, number, and special character.',
-      }));
-      return false;
-    }
-
-    if (data.password !== data.confirmPassword) {
-      setState(prev => ({ ...prev, isLoading: false, error: 'Passwords do not match.' }));
-      return false;
-    }
-
-    // Simulate API call
-    await new Promise(r => setTimeout(r, 1000));
-
-    setState(prev => ({ ...prev, isLoading: false, error: null }));
-    return true;
-  }, []);
-
   const logout = useCallback(() => {
     localStorage.removeItem(AUTH_STORAGE_KEY);
-    sessionStorage.removeItem('pending_auth');
+    sessionStorage.removeItem('pending_admin_auth');
     setState({
       user: null,
       isAuthenticated: false,
       isLoading: false,
       mfaRequired: false,
-      mfaVerified: false,
       error: null,
       sessionToken: null,
     });
   }, []);
 
   const cancelMFA = useCallback(() => {
-    sessionStorage.removeItem('pending_auth');
+    sessionStorage.removeItem('pending_admin_auth');
     setState(prev => ({
       ...prev,
       mfaRequired: false,
@@ -362,9 +259,10 @@ export function useAuth() {
   return {
     ...state,
     login,
-    register,
     logout,
     verifyMFA,
     cancelMFA,
+    isAdmin: true, // Single admin system
+    adminEmail: ADMIN_EMAIL,
   };
 }

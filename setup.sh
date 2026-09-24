@@ -166,6 +166,14 @@ REDIS_PASSWORD=$(generate_secret 24 32)
 SECRET_KEY=$(generate_secret 48 64)
 SESSION_SECRET=$(generate_secret 32 48)
 
+# ─── Generate Admin Credentials (Single Admin System) ────────────────────────
+# Only ONE admin account exists. No registration. No other users.
+ADMIN_EMAIL="admin@tradingbot.local"
+ADMIN_PASSWORD=$(generate_secret 16 20)
+# Ensure password has required complexity: upper, lower, number, special
+ADMIN_PASSWORD="${ADMIN_PASSWORD}A1!"
+ADMIN_MFA_SECRET=$(openssl rand -base64 20 | tr -d '/+=' | head -c 32)
+
 cat > "$ENV_FILE" << EOF
 ###############################################################################
 # AI Trading Bot — Production Environment Configuration
@@ -208,6 +216,12 @@ JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
 ENCRYPTION_KEY=${ENCRYPTION_KEY}
 SECRET_KEY=${SECRET_KEY}
 SESSION_SECRET=${SESSION_SECRET}
+
+# ─── Admin Account (Single Admin System) ─────────────────────────────────────
+# Only ONE admin exists. No registration. No other users allowed.
+ADMIN_EMAIL=${ADMIN_EMAIL}
+ADMIN_PASSWORD=${ADMIN_PASSWORD}
+ADMIN_MFA_SECRET=${ADMIN_MFA_SECRET}
 
 # Rate limiting
 RATE_LIMIT_PER_MINUTE=60
@@ -2161,6 +2175,14 @@ echo -e "${GREEN}║${NC}  Server URL:  ${CYAN}http://${SERVER_IP}${NC}         
 echo -e "${GREEN}║${NC}  API Docs:    ${CYAN}http://${SERVER_IP}/api/docs${NC}                    ${GREEN}║${NC}"
 echo -e "${GREEN}║${NC}  Trading Mode: ${YELLOW}PAPER${NC} (safe — no real orders)              ${GREEN}║${NC}"
 echo -e "${GREEN}║${NC}  Broker:       ${GREEN}Groww${NC} (configure API keys in .env)              ${GREEN}║${NC}"
+echo -e "${GREEN}║${NC}                                                              ${GREEN}║${NC}"
+echo -e "${GREEN}║${NC}  ${CYAN}━━━ ADMIN CREDENTIALS (Save These!) ━━━${NC}                    ${GREEN}║${NC}"
+echo -e "${GREEN}║${NC}                                                              ${GREEN}║${NC}"
+echo -e "${GREEN}║${NC}  Email:    ${YELLOW}${ADMIN_EMAIL}${NC}                      ${GREEN}║${NC}"
+echo -e "${GREEN}║${NC}  Password: ${YELLOW}${ADMIN_PASSWORD}${NC}          ${GREEN}║${NC}"
+echo -e "${GREEN}║${NC}  MFA Key:  ${YELLOW}${ADMIN_MFA_SECRET}${NC}          ${GREEN}║${NC}"
+echo -e "${GREEN}║${NC}                                                              ${GREEN}║${NC}"
+echo -e "${GREEN}║${NC}  ${RED}⚠️  SAVE THESE NOW! They won't be shown again.${NC}              ${GREEN}║${NC}"
 echo -e "${GREEN}║${NC}                                                              ${GREEN}║${NC}"
 echo -e "${GREEN}║${NC}  ${RED}IMPORTANT:${NC} Live trading is DISABLED by default.             ${GREEN}║${NC}"
 echo -e "${GREEN}║${NC}  To enable: Edit .env → set TRADING_MODE=LIVE              ${GREEN}║${NC}"
