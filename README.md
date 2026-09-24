@@ -279,7 +279,7 @@ When `APP_DEBUG=true`, API docs available at:
 - ✅ Passwords: Argon2id hashing (memory-hard, GPU-resistant)
 - ✅ Sessions: JWT with short expiry + refresh token rotation
 - ✅ API: Rate limiting, input validation, CORS restrictions
-- ✅ Network: Internal Docker network, firewall rules
+- ✅ Network: Firewall rules (UFW), Fail2ban protection
 - ✅ Secrets: Encrypted at rest, never in logs or git
 - ✅ Audit: All actions logged with IP, timestamp, metadata
 
@@ -299,34 +299,58 @@ When `APP_DEBUG=true`, API docs available at:
 
 ### View Logs
 ```bash
-docker compose logs -f           # All services
-docker compose logs -f backend   # Backend only
+# Backend logs
+journalctl -u trading-backend -f
+
+# Frontend logs
+pm2 logs trading-frontend
+
+# Nginx logs
+tail -f /var/log/nginx/error.log
+
+# Application logs
 tail -f /opt/ai-trading-bot/logs/app.log
 ```
 
 ### Backup Database
 ```bash
-/opt/ai-trading-bot/scripts/backup.sh
+/opt/ai-trading-bot/backup.sh
 ```
 
 ### Health Check
 ```bash
-/opt/ai-trading-bot/scripts/healthcheck.sh
+/opt/ai-trading-bot/health-check.sh
 ```
 
 ### Restart Services
 ```bash
-docker compose restart
-# or
-systemctl restart ai-trading-bot
+# Restart backend
+systemctl restart trading-backend
+
+# Restart frontend
+pm2 restart trading-frontend
+
+# Restart Nginx
+systemctl restart nginx
 ```
 
 ### Update Application
 ```bash
 cd /opt/ai-trading-bot
 git pull
-docker compose build
-docker compose up -d
+
+# Update backend
+cd backend
+source venv/bin/activate
+pip install -r requirements.txt
+deactivate
+systemctl restart trading-backend
+
+# Update frontend
+cd ../frontend
+npm install
+npm run build
+pm2 restart trading-frontend
 ```
 
 ---
@@ -335,14 +359,12 @@ docker compose up -d
 
 ```
 ai-trading-bot/
-├── setup.sh                    # One-click installer
-├── docker-compose.yml          # Production Docker setup
+├── vps-setup.sh                # One-click native installer (No Docker)
 ├── .env.example                # Environment template
 ├── .gitignore                  # Git ignore rules
 ├── README.md                   # This file
 │
 ├── backend/                    # FastAPI Backend
-│   ├── Dockerfile
 │   ├── requirements.txt
 │   └── app/
 │       ├── main.py             # Application entry
@@ -362,7 +384,7 @@ ai-trading-bot/
 │       └── middleware/         # Security middleware
 │
 ├── frontend/                   # React Frontend
-│   ├── Dockerfile
+│   ├── package.json
 │   ├── nginx.conf
 │   └── src/
 │       ├── App.tsx
