@@ -53,7 +53,8 @@ Broker Adapter (Zerodha/Upstox/Angel)
 - **Secure Headers**: HSTS, X-Frame-Options, X-Content-Type-Options
 - **Secrets Management**: All secrets in .env (never committed)
 - **Audit Logging**: Every action logged with timestamps and IPs
-- **Network Isolation**: Internal Docker network for DB/Redis
+- **Firewall Protection**: UFW configured for SSH, HTTP, HTTPS only
+- **Fail2ban**: Brute-force protection for SSH and Nginx
 
 ### Trading
 - **Three Modes**: BACKTEST / PAPER / LIVE (LIVE disabled by default)
@@ -89,16 +90,16 @@ sudo ./setup.sh
 
 The installer automatically:
 1. ✅ Detects OS and checks system requirements
-2. ✅ Installs Docker, Docker Compose
+2. ✅ Installs PostgreSQL, Redis, Node.js, Python
 3. ✅ Generates cryptographically secure secrets
 4. ✅ **Creates single admin account** (credentials shown at end)
-5. ✅ Builds backend + frontend
-6. ✅ Creates PostgreSQL database with all tables
-7. ✅ Configures Nginx reverse proxy
-8. ✅ Sets up firewall (UFW) + Fail2ban
-9. ✅ Configures automatic backups
-10. ✅ Creates systemd service (auto-restart on reboot)
-11. ✅ Runs health checks and verification
+5. ✅ Sets up backend with Python virtualenv + systemd
+6. ✅ Builds frontend with Node.js + PM2
+7. ✅ Creates PostgreSQL database with all tables
+8. ✅ Configures Nginx reverse proxy
+9. ✅ Sets up SSL certificate (Let's Encrypt)
+10. ✅ Configures firewall (UFW) + Fail2ban
+11. ✅ Sets up automatic backups + health checks
 
 **Estimated time: 5-15 minutes**
 
@@ -106,13 +107,13 @@ The installer automatically:
 
 ---
 
-## Manual Setup
+## Manual Setup (Without Docker)
 
 ### Prerequisites
-- Docker 24+ and Docker Compose v2+
+- Ubuntu 22.04+ (or compatible Linux)
 - 2GB+ RAM, 20GB+ disk
 - Domain name with DNS pointing to VPS
-- Ubuntu 22.04+ (or compatible Linux)
+- Root/sudo access
 
 ### Steps
 
@@ -129,27 +130,51 @@ nano .env  # Fill in all required values
 openssl rand -base64 48  # For JWT_SECRET
 openssl rand -base64 32  # For ENCRYPTION_KEY
 
-# 4. Build and start
-docker compose build
-docker compose up -d
+# 4. Install dependencies
+sudo apt update
+sudo apt install -y postgresql redis-server python3 python3-pip python3-venv nodejs npm nginx
 
-# 5. Verify
-docker compose ps
-curl http://localhost:8000/api/health
+# 5. Setup PostgreSQL
+sudo -u postgres psql
+CREATE USER trading_user WITH PASSWORD 'your_password';
+CREATE DATABASE trading_bot OWNER trading_user;
+\q
+
+# 6. Setup backend
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+# 7. Setup frontend
+cd ../frontend
+npm install
+npm run build
+npm install -g serve
+serve -s dist -l 3000
+
+# 8. Configure Nginx (see nginx.conf)
+# 9. Setup PM2 for frontend
+npm install -g pm2
+pm2 start "serve -s dist -l 3000" --name trading-frontend
+pm2 save
+pm2 startup
+
+# 10. Setup systemd for backend
+# Create /etc/systemd/system/trading-backend.service
 ```
 
 ### SSL/HTTPS Setup
 
 ```bash
 # Install certbot
-apt install certbot python3-certbot-nginx
+sudo apt install certbot python3-certbot-nginx
 
 # Get certificate
-certbot certonly --nginx -d your-domain.com
+sudo certbot --nginx -d your-domain.com
 
-# Update nginx/nginx.conf with your domain
-# Restart nginx
-docker compose restart nginx
+# Auto-renewal is configured automatically
 ```
 
 ---
