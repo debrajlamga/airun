@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuthContext } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Market from './pages/Market';
@@ -13,10 +14,9 @@ import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
 import { useTrading } from './hooks/useTrading';
-import { useAuth } from './hooks/useAuth';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const auth = useAuth();
+  const auth = useAuthContext();
   if (!auth.isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
@@ -24,8 +24,16 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
+
+function AppContent() {
   const trading = useTrading();
-  const auth = useAuth();
+  const auth = useAuthContext();
 
   if (!auth.isAuthenticated) {
     return (

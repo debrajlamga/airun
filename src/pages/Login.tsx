@@ -1,21 +1,36 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Activity, Shield, Lock, Mail, Eye, EyeOff, Fingerprint, AlertTriangle, ArrowLeft, KeyRound } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthContext } from '../contexts/AuthContext';
 
 export default function Login() {
-  const auth = useAuth();
+  const auth = useAuthContext();
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
   const [formData, setFormData] = useState({ email: '', password: '' });
 
+  // Redirect to dashboard when authenticated
+  useEffect(() => {
+    if (auth.isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [auth.isAuthenticated, navigate]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    await auth.login({ email: formData.email, password: formData.password });
+    const success = await auth.login({ email: formData.email, password: formData.password });
+    if (success && !auth.mfaRequired) {
+      navigate('/', { replace: true });
+    }
   };
 
   const handleMFA = async (e: React.FormEvent) => {
     e.preventDefault();
-    await auth.verifyMFA(mfaCode);
+    const success = await auth.verifyMFA(mfaCode);
+    if (success) {
+      navigate('/', { replace: true });
+    }
   };
 
   // ─── MFA Verification Screen ──────────────────────────────────────────────
