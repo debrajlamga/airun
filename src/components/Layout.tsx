@@ -9,6 +9,8 @@ interface LayoutProps {
   tradingMode: TradingMode;
   notifications: { id: string; read: boolean }[];
   onEmergencyStop: () => void;
+  user?: { name: string; email: string; role: string } | null;
+  onLogout?: () => void;
 }
 
 const navItems = [
@@ -25,7 +27,7 @@ const navItems = [
   { path: '/settings', icon: Settings, label: 'Settings' },
 ];
 
-export default function Layout({ children, botStatus, tradingMode, notifications, onEmergencyStop }: LayoutProps) {
+export default function Layout({ children, botStatus, tradingMode, notifications, onEmergencyStop, user, onLogout }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -156,6 +158,22 @@ export default function Layout({ children, botStatus, tradingMode, notifications
             <div className="text-xs text-gray-500">
               {new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} IST
             </div>
+            {user && (
+              <div className="flex items-center gap-2">
+                <div className="text-right hidden sm:block">
+                  <div className="text-xs text-gray-300 font-medium">{user.name}</div>
+                  <div className="text-[10px] text-gray-500 capitalize">{user.role}</div>
+                </div>
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-xs font-bold text-white">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                {onLogout && (
+                  <button onClick={onLogout} className="p-1.5 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-red-400 transition-colors" title="Logout">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </header>
 

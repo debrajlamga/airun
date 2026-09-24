@@ -1,5 +1,65 @@
-node_modules/
-.next/
+# AI Trading Bot — .gitignore
+# Never commit secrets, environment files, or build artifacts
+
+# Environment & Secrets
+.env
+.env.local
+.env.production
+*.pem
+*.key
+*.cert
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+*.egg-info/
 dist/
 build/
+
+# Node/Frontend
+node_modules/
+frontend/dist/
+frontend/.next/
+.next/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+logs/
 *.log
+
+# Database
+*.sql.gz
+backups/
+
+# Data
+data/historical/*.csv
+data/imports/
+data/exports/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# SSL
+nginx/ssl/
+certbot/
