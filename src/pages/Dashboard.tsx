@@ -39,10 +39,12 @@ export default function Dashboard({ botState, positions, trades, strategies, por
   }));
   const COLORS = ['#3b82f6', '#8b5cf6', '#06b6d4', '#f59e0b', '#ef4444', '#10b981'];
 
-  const todayPnL = botState.pnlToday;
+  const todayPnL = botState.pnlToday || 0;
   const maxDrawdown = 4.2;
-  const avgProfit = trades.filter(t => t.netPnL > 0).reduce((s, t) => s + t.netPnL, 0) / Math.max(trades.filter(t => t.netPnL > 0).length, 1);
-  const avgLoss = trades.filter(t => t.netPnL < 0).reduce((s, t) => s + t.netPnL, 0) / Math.max(trades.filter(t => t.netPnL < 0).length, 1);
+  const winningTrades = trades.filter(t => (t.netPnL || 0) > 0);
+  const losingTrades = trades.filter(t => (t.netPnL || 0) < 0);
+  const avgProfit = winningTrades.length > 0 ? winningTrades.reduce((s, t) => s + (t.netPnL || 0), 0) / winningTrades.length : 0;
+  const avgLoss = losingTrades.length > 0 ? losingTrades.reduce((s, t) => s + (t.netPnL || 0), 0) / losingTrades.length : 0;
 
   return (
     <div className="space-y-6">

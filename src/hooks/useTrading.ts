@@ -25,30 +25,42 @@ export function useTrading() {
   // Simulate real-time market data updates
   useEffect(() => {
     intervalRef.current = window.setInterval(() => {
-      setMarketData(prev => prev.map(inst => {
-        const change = (Math.random() - 0.48) * inst.ltp * 0.002;
-        const newPrice = Math.round((inst.ltp + change) * 100) / 100;
-        const newChange = Math.round((newPrice - inst.close) * 100) / 100;
-        const newChangePercent = Math.round((newChange / inst.close) * 10000) / 100;
-        return {
-          ...inst,
-          ltp: newPrice,
-          change: newChange,
-          changePercent: newChangePercent,
-          volume: inst.volume + Math.floor(Math.random() * 1000),
-        };
-      }));
+      try {
+        setMarketData(prev => {
+          if (!prev || prev.length === 0) return prev;
+          return prev.map(inst => {
+            if (!inst || typeof inst.ltp !== 'number') return inst;
+            const change = (Math.random() - 0.48) * inst.ltp * 0.002;
+            const newPrice = Math.round((inst.ltp + change) * 100) / 100;
+            const newChange = Math.round((newPrice - (inst.close || newPrice)) * 100) / 100;
+            const newChangePercent = inst.close ? Math.round((newChange / inst.close) * 10000) / 100 : 0;
+            return {
+              ...inst,
+              ltp: newPrice,
+              change: newChange,
+              changePercent: newChangePercent,
+              volume: (inst.volume || 0) + Math.floor(Math.random() * 1000),
+            };
+          });
+        });
 
-      // Update positions with new prices
-      setPositions(prev => prev.map(pos => {
-        const inst = marketData.find(i => i.symbol === pos.symbol);
-        if (!inst) return pos;
-        const currentPrice = inst.ltp;
-        const unrealizedPnL = pos.side === 'BUY'
-          ? (currentPrice - pos.averagePrice) * pos.quantity
-          : (pos.averagePrice - currentPrice) * pos.quantity;
-        return { ...pos, currentPrice, unrealizedPnL: Math.round(unrealizedPnL * 100) / 100 };
-      }));
+        // Update positions with new prices
+        setPositions(prev => {
+          if (!prev || prev.length === 0) return prev;
+          return prev.map(pos => {
+            if (!pos) return pos;
+            const inst = marketData.find(i => i.symbol === pos.symbol);
+            if (!inst || typeof inst.ltp !== 'number') return pos;
+            const currentPrice = inst.ltp;
+            const unrealizedPnL = pos.side === 'BUY'
+              ? (currentPrice - (pos.averagePrice || 0)) * (pos.quantity || 0)
+              : ((pos.averagePrice || 0) - currentPrice) * (pos.quantity || 0);
+            return { ...pos, currentPrice, unrealizedPnL: Math.round(unrealizedPnL * 100) / 100 };
+          });
+        });
+      } catch (error) {
+        console.error('Error in market data update:', error);
+      }
     }, 2000);
 
     return () => {
@@ -140,10 +152,10 @@ export function useTrading() {
     };
   }, [strategies, marketData]);
 
-  const totalPnL = trades.reduce((sum, t) => sum + t.netPnL, 0);
-  const investedCapital = positions.reduce((sum, p) => sum + p.averagePrice * p.quantity, 0);
-  const unrealizedPnL = positions.reduce((sum, p) => sum + p.unrealizedPnL, 0);
-  const winRate = trades.length > 0 ? Math.round((trades.filter(t => t.netPnL > 0).length / trades.length) * 10000) / 100 : 0;
+  const totalPnL = trades.reduce((sum, t) => sum + (t.netPnL || 0), 0);
+  const investedCapital = positions.reduce((sum, p) => sum + ((p.averagePrice || 0) * (p.quantity || 0)), 0);
+  const unrealizedPnL = positions.reduce((sum, p) => sum + (p.unrealizedPnL || 0), 0);
+  const winRate = trades.length > 0 ? Math.round((trades.filter(t => (t.netPnL || 0) > 0).length / trades.length) * 10000) / 100 : 0;
 
   return {
     botState,
