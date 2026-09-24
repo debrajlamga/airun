@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { Search, Star, TrendingUp, TrendingDown } from 'lucide-react';
+import { Search, Star, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 import { Instrument, Timeframe, OHLCV } from '../types';
 import { generateOHLCV } from '../data/mockData';
+import { getRealMarketData } from '../services/freeMarketData';
 
 interface MarketProps {
   instruments: Instrument[];
@@ -14,6 +15,8 @@ export default function Market({ instruments }: MarketProps) {
   const [timeframe, setTimeframe] = useState<Timeframe>('15m');
   const [watchlist, setWatchlist] = useState<string[]>(['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK']);
   const [chartType, setChartType] = useState<'area' | 'bar'>('area');
+  const [isRealData, setIsRealData] = useState(false);
+  const [realData, setRealData] = useState<any>(null);
 
   const timeframes: Timeframe[] = ['1m', '5m', '15m', '30m', '1h', '1D'];
 
@@ -23,6 +26,24 @@ export default function Market({ instruments }: MarketProps) {
   );
 
   const selectedInstrument = instruments.find(i => i.symbol === selectedSymbol);
+
+  // Fetch real market data
+  useEffect(() => {
+    const fetchRealData = async () => {
+      const data = await getRealMarketData(selectedSymbol);
+      if (data) {
+        setRealData(data);
+        setIsRealData(true);
+      } else {
+        setIsRealData(false);
+      }
+    };
+
+    fetchRealData();
+    const interval = setInterval(fetchRealData, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [selectedSymbol]);
   const chartData = useMemo(() => {
     if (!selectedInstrument) return [];
     const ohlcv = generateOHLCV(selectedInstrument.ltp, timeframe === '1D' ? 90 : 30, timeframe);
@@ -42,6 +63,28 @@ export default function Market({ instruments }: MarketProps) {
 
   return (
     <div className="space-y-4">
+      {/* Data Source Warning */}
+      {!isRealData && (
+        <div className="bg-yellow-900/20 border border-yellow-700/40 rounded-lg p-3 flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-yellow-500 mt-0.5 shrink-0" />
+          <div className="text-xs text-yellow-400/80">
+            <strong>Demo Mode:</strong> Yeh FAKE data hai (testing ke liye). Real market data ke liye:
+            <ul className="list-disc list-inside mt-1 space-y-0.5">
+              <li>Groww/Zerodha API configure karein (.env file mein)</li>
+              <li>Ya free API key lein (Alpha Vantage / Twelve Data)</li>
+              <li>VPS pe deploy karein: <code className="bg-gray-800 px-1 rounded">sudo bash vps-setup.sh</code></li>
+            </ul>
+          </div>
+        </div>
+      )}
+      
+      {isRealData && (
+        <div className="bg-green-900/20 border border-green-700/40 rounded-lg p-3 flex items-center gap-2">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+          <span className="text-xs text-green-400">✓ Real-time market data connected</span>
+        </div>
+      )}
+
       {/* Search and Watchlist */}
       <div className="flex flex-col lg:flex-row gap-4">
         {/* Watchlist */}
@@ -67,23 +110,28 @@ export default function Market({ instruments }: MarketProps) {
                 onClick={() => setSelectedSymbol(inst.symbol)}
                 className={`w-full flex items-center justify-between p-2 rounded-lg text-left transition-colors ${selectedSymbol === inst.symbol ? 'bg-blue-600/20 border border-blue-600/30' : 'hover:bg-gray-800'}`}
               >
-                <div className="flex items-center gap-2">
-                  <button onClick={(e) => { e.stopPropagation(); toggleWatchlist(inst.symbol); }} className="p-0.5">
-                    <Star className={`w-3 h-3 ${watchlist.includes(inst.symbol) ? 'text-yellow-500 fill-yellow-500' : 'text-gray-600'}`} />
-                  </button>
-                  <div>
-                    <div className="text-xs font-medium">{inst.symbol}</div>
-                    <div className="text-[10px] text-gray-500">{inst.exchange}</div>
-                  </div>
+              <div className="flex items-center gap-2">
+                <button onClick={(e) => { e.stopPropagation(); toggleWatchlist(inst.symbol); }} className="p-0.5">
+                  <Star className={`w-3 h-3 ${watchlist.includes(inst.symbol) ? 'text-yellow-500 fill-yellow-500' : 'text-gray-600'}`} />
+                </button>
+                <div>
+                  <div className="text-xs font-medium">{inst.symbol}</div>
+                  <div className="text-[10px] text-gray-500">{inst.exchange}</div>
                 </div>
-                <div className="text-right">
-                  <div className="text-xs font-medium">₹{inst.ltp.toLocaleString('en-IN')}</div>
-                  <div className={`text-[10px] flex items-center gap-0.5 justify-end ${inst.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {inst.change >= 0 ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
-                    {inst.changePercent >= 0 ? '+' : ''}{inst.changePercent}%
-                  </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs font-medium">
+                  {isRealData && realData?.symbol === inst.symbol ? (
+                    <>₹{realData.ltp?.toLocaleString('en-IN')}</>
+                  ) : (
+                    <>₹{inst.ltp.toLocaleString('en-IN')}</>
+                  )}
                 </div>
-              </button>
+                <div className={`text-[10px] flex items-center gap-0.5 justify-end ${(isRealData && realData?.symbol === inst.symbol ? realData.change : inst.change) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {(isRealData && realData?.symbol === inst.symbol ? realData.change : inst.change) >= 0 ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
+                  {(isRealData && realData?.symbol === inst.symbol ? realData.changePercent : inst.changePercent) >= 0 ? '+' : ''}{(isRealData && realData?.symbol === inst.symbol ? realData.changePercent : inst.changePercent)}%
+                </div>
+              </div>              </button>
             ))}
           </div>
         </div>
@@ -98,12 +146,19 @@ export default function Market({ instruments }: MarketProps) {
                   <div className="flex items-center gap-2">
                     <h2 className="text-lg font-bold">{selectedInstrument.symbol}</h2>
                     <span className="text-xs px-2 py-0.5 bg-gray-800 rounded text-gray-400">{selectedInstrument.exchange}</span>
+                    {isRealData && <span className="text-[10px] px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded">LIVE</span>}
                   </div>
                   <div className="flex items-center gap-3 mt-1">
-                    <span className="text-xl font-bold">₹{selectedInstrument.ltp.toLocaleString('en-IN')}</span>
-                    <span className={`text-sm font-medium flex items-center gap-1 ${selectedInstrument.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {selectedInstrument.change >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                      {selectedInstrument.change >= 0 ? '+' : ''}₹{selectedInstrument.change.toFixed(2)} ({selectedInstrument.changePercent}%)
+                    <span className="text-xl font-bold">
+                      {isRealData && realData?.ltp ? (
+                        <>₹{realData.ltp.toLocaleString('en-IN')}</>
+                      ) : (
+                        <>₹{selectedInstrument.ltp.toLocaleString('en-IN')}</>
+                      )}
+                    </span>
+                    <span className={`text-sm font-medium flex items-center gap-1 ${(isRealData && realData?.change ? realData.change : selectedInstrument.change) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {(isRealData && realData?.change ? realData.change : selectedInstrument.change) >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                      {(isRealData && realData?.change ? realData.change : selectedInstrument.change) >= 0 ? '+' : ''}₹{(isRealData && realData?.change ? realData.change : selectedInstrument.change).toFixed(2)} ({(isRealData && realData?.changePercent ? realData.changePercent : selectedInstrument.changePercent)}%)
                     </span>
                   </div>
                 </div>
